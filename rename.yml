@@ -1,0 +1,54 @@
+
+name: Sequential Image Renamer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rename-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Process Renaming
+        run: |
+          mkdir -p /tmp/meme-staging
+          
+          echo "memindahkan semua file JPG ke staging area..."
+          for file in *.jpg; do
+            if [ -f "$file" ]; then
+              mv "$file" /tmp/meme-staging/
+            fi
+          done
+
+          echo "rename secara berurutan..."
+          count=1
+          
+          ls -1 /tmp/meme-staging/*.jpg | sort -V | while read -r filepath; do
+            if [ -f "$filepath" ]; then
+              mv "$filepath" "./meme-${count}.jpg"
+              echo "Renamed: $(basename "$filepath") -> meme-${count}.jpg"
+              count=$((count + 1))
+            fi
+          done
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add *.jpg
+          
+          if git diff --staged --quiet; then
+            echo "Tidak ada perubahan nama file."
+          else
+            git commit -m "chore: auto rename images sequentially to meme-X.jpg [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+          fi
