@@ -1,3 +1,10 @@
+# ════════════════════════════════════════════
+# Wesker-MD  ╌  febry wesker
+# ════════════════════════════════════════════
+# file    : .github/workflows/rename.yml
+# desc    : Auto rename images sequentially (Fix Duplicate Version)
+# author  : febry  ⪩  2026
+# ════════════════════════════════════════════
 
 name: Sequential Image Renamer
 
@@ -21,35 +28,42 @@ jobs:
         run: |
           mkdir -p /tmp/meme-staging
           
-          echo "memindahkan semua file JPG ke staging area..."
+          echo "📦 Memindahkan semua file JPG ke staging..."
           for file in *.jpg; do
             if [ -f "$file" ]; then
-              mv "$file" /tmp/meme-staging/
+              cp "$file" /tmp/meme-staging/
             fi
           done
 
-          echo "mulai me-rename secara berurutan..."
-          count=1
+          echo "🗑️ Menghapus track file lama dari Git agar tidak duplikat..."
+          git rm *.jpg --ignore-unmatch
+
+          echo "🚀 Mendata dan menyusun ulang file secara berurutan..."
+          cd /tmp/meme-staging
           
-          ls -1 /tmp/meme-staging/*.jpg | sort -V | while read -r filepath; do
-            if [ -f "$filepath" ]; then
-              mv "$filepath" "./meme-${count}.jpg"
-              echo "Renamed: $(basename "$filepath") -> meme-${count}.jpg"
+          # Ambil list file, urutkan natural, lalu rename pake file descriptor biar count gak reset
+          count=1
+          ls -1 *.jpg | sort -V > /tmp/filelist.txt
+          
+          while read -r filename; do
+            if [ -f "$filename" ]; then
+              mv "$filename" "${GITHUB_WORKSPACE}/meme-${count}.jpg"
               count=$((count + 1))
             fi
-          done
+          done < /tmp/filelist.txt
 
       - name: Commit and Push Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          git add *.jpg
+          # Pasang status track baru untuk file yang berhasil di-rename
+          git add meme-*.jpg
           
           if git diff --staged --quiet; then
             echo "Tidak ada perubahan nama file."
           else
-            git commit -m "chore: auto rename images sequentially to meme-X.jpg [skip ci]"
+            git commit -m "chore: clean and auto rename images sequentially [skip ci]"
             git push origin HEAD:${{ github.ref }}
           fi
           
